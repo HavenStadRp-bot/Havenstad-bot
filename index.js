@@ -28,8 +28,26 @@ const SSU_CHANNEL = "1404865394094637227"; // Kanaal waar embed komt
 
 let ssuMessageId = null; // Om oud bericht te tracken
 
-client.on("ready", () => {
+client.on('ready', async () => {
   console.log(`✅ Ingelogd als ${client.user.tag}`);
+
+  // Zoek bij opstart of er al een bestaand SSU bericht is
+  try {
+    const channel = await client.channels.fetch(SSU_CHANNEL);
+    const messages = await channel.messages.fetch({ limit: 50 });
+    const ssuMsg = messages.find(msg =>
+      msg.author.id === client.user.id &&
+      (msg.embeds[0]?.title?.includes('Onze server is opgestart') || msg.embeds[0]?.title?.includes('Onze server is nu gesloten'))
+    );
+    if (ssuMsg) {
+      ssuMessageId = ssuMsg.id;
+      console.log(`ℹ️ SSU bericht gevonden met ID: ${ssuMessageId}`);
+    } else {
+      console.log("ℹ️ Geen bestaand SSU bericht gevonden");
+    }
+  } catch (err) {
+    console.log("⚠️ Fout bij zoeken naar SSU bericht:", err);
+  }
 });
 
 client.on("messageCreate", async (message) => {
@@ -44,17 +62,6 @@ client.on("messageCreate", async (message) => {
     }
 
     const channel = await client.channels.fetch(SSU_CHANNEL);
-
-    // Verwijder oud bericht als dat bestaat
-    if (ssuMessageId) {
-      try {
-        const oldMsg = await channel.messages.fetch(ssuMessageId);
-        await oldMsg.delete();
-      } catch (err) {
-        console.log("⚠️ Oud SSU bericht niet gevonden of al verwijderd:", err);
-      }
-      ssuMessageId = null;
-    }
 
     let embed;
     let content = null;
@@ -85,8 +92,19 @@ client.on("messageCreate", async (message) => {
         .setFooter({ text: `Gestopt door ${message.author.tag}` });
     }
 
-    const msg = await channel.send({ content, embeds: [embed] });
-    ssuMessageId = msg.id;
+    if (ssuMessageId) {
+      try {
+        const oldMsg = await channel.messages.fetch(ssuMessageId);
+        await oldMsg.edit({ content, embeds: [embed] });
+      } catch (error) {
+        // Oud bericht weg, nieuwe maken
+        const newMsg = await channel.send({ content, embeds: [embed] });
+        ssuMessageId = newMsg.id;
+      }
+    } else {
+      const newMsg = await channel.send({ content, embeds: [embed] });
+      ssuMessageId = newMsg.id;
+    }
   }
 
   // Moderatie commands (kick/ban voorbeeld)
