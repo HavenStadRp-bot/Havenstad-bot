@@ -1,3 +1,17 @@
+// ==== Webserver voor Render / Uptimebot ====
+const express = require('express');
+const app = express();
+const port = process.env.PORT || 4000;
+
+app.get('/', (req, res) => {
+  res.send('HavenStad Roleplay bot is online!');
+});
+
+app.listen(port, () => {
+  console.log(`🌐 Webserver draait op poort ${port}`);
+});
+
+// ==== Discord bot ====
 const { Client, GatewayIntentBits, EmbedBuilder, PermissionsBitField } = require('discord.js');
 
 const client = new Client({
@@ -26,7 +40,7 @@ client.on("messageCreate", async (message) => {
   const args = message.content.slice(prefix.length).trim().split(/ +/);
   const command = args.shift().toLowerCase();
 
-  // SSU START
+  // ===== SSU START =====
   if (command === "ssu" && args[0] === "start") {
     if (!message.member.roles.cache.has(SSU_PERMISSION_ROLE)) {
       return message.reply("❌ Je hebt geen rechten om dit te doen.");
@@ -48,7 +62,7 @@ client.on("messageCreate", async (message) => {
     ssuMessageId = msg.id;
   }
 
-  // SSU STOP
+  // ===== SSU STOP =====
   else if (command === "ssu" && args[0] === "stop") {
     if (!message.member.roles.cache.has(SSU_PERMISSION_ROLE)) {
       return message.reply("❌ Je hebt geen rechten om dit te doen.");
@@ -60,7 +74,7 @@ client.on("messageCreate", async (message) => {
         const oldMsg = await channel.messages.fetch(ssuMessageId);
         await oldMsg.delete();
       } catch (err) {
-        console.log("Kon het oude SSU bericht niet verwijderen:", err);
+        console.log("⚠️ Kon het oude SSU bericht niet verwijderen:", err);
       }
       ssuMessageId = null;
     }
@@ -79,13 +93,13 @@ client.on("messageCreate", async (message) => {
     await channel.send({ embeds: [embed] });
   }
 
-  // Kick command
+  // ===== Kick =====
   else if (command === "kick") {
     if (!message.member.permissions.has(PermissionsBitField.Flags.KickMembers)) {
       return message.reply("❌ Je hebt geen rechten om dit te doen.");
     }
     const member = message.mentions.members.first();
-    if (!member) return message.reply("Geef een gebruiker op om te kicken.");
+    if (!member) return message.reply("⚠️ Geef een gebruiker op om te kicken.");
     try {
       await member.kick();
       message.channel.send(`✅ ${member.user.tag} is gekickt.`);
@@ -94,13 +108,13 @@ client.on("messageCreate", async (message) => {
     }
   }
 
-  // Ban command
+  // ===== Ban =====
   else if (command === "ban") {
     if (!message.member.permissions.has(PermissionsBitField.Flags.BanMembers)) {
       return message.reply("❌ Je hebt geen rechten om dit te doen.");
     }
     const member = message.mentions.members.first();
-    if (!member) return message.reply("Geef een gebruiker op om te bannen.");
+    if (!member) return message.reply("⚠️ Geef een gebruiker op om te bannen.");
     try {
       await member.ban();
       message.channel.send(`✅ ${member.user.tag} is verbannen.`);
