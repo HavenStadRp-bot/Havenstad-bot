@@ -23,10 +23,10 @@ const client = new Client({
 
 const prefix = "!";
 const SSU_ROLE = "1404867280546041986"; // Rol die gepingd wordt bij start
-const SSU_PERMISSION_ROLE = "1404873533951312024"; // Rol die start/stop mag uitvoeren
-const SSU_CHANNEL = "1404865394094637227"; // Kanaal waar berichten komen
+const SSU_PERMISSION_ROLE = "1404873533951312024"; // Rol die mag starten/stoppen
+const SSU_CHANNEL = "1404865394094637227"; // Kanaal waar embed komt
 
-let ssuMessageId = null; // Om oud bericht te verwijderen
+let ssuMessageId = null; // Om oud bericht te tracken
 
 client.on("ready", () => {
   console.log(`✅ Ingelogd als ${client.user.tag}`);
@@ -45,20 +45,23 @@ client.on("messageCreate", async (message) => {
 
     const channel = await client.channels.fetch(SSU_CHANNEL);
 
-    // Verwijder eventueel oud bericht
+    // Verwijder oud bericht als dat bestaat
     if (ssuMessageId) {
       try {
         const oldMsg = await channel.messages.fetch(ssuMessageId);
         await oldMsg.delete();
       } catch (err) {
-        console.log("⚠️ Kon het oude SSU bericht niet verwijderen:", err);
+        console.log("⚠️ Oud SSU bericht niet gevonden of al verwijderd:", err);
       }
       ssuMessageId = null;
     }
 
+    let embed;
+    let content = null;
+
     if (args[0] === "start") {
-      const embed = new EmbedBuilder()
-        .setColor("#004d00") // iets donkerder groen
+      embed = new EmbedBuilder()
+        .setColor("#004000") // donker groen
         .setTitle(`🚀 Onze server is opgestart! (door ${message.author.tag})`)
         .setDescription(
           `Zorg ervoor dat je een beroep hebt.\nWe wensen je een geweldige RP-sessie toe!\n\nJoin de server via [Klik hier](https://policeroleplay.community/join/YdJXu)`
@@ -68,10 +71,9 @@ client.on("messageCreate", async (message) => {
         )
         .setFooter({ text: `Gestart door ${message.author.tag}` });
 
-      const msg = await channel.send({ content: `<@&${SSU_ROLE}>`, embeds: [embed] });
-      ssuMessageId = msg.id;
-    } else if (args[0] === "stop") {
-      const embed = new EmbedBuilder()
+      content = `<@&${SSU_ROLE}>`;
+    } else {
+      embed = new EmbedBuilder()
         .setColor("Red")
         .setTitle(`⛔ Onze server is nu gesloten (door ${message.author.tag})`)
         .setDescription(
@@ -81,12 +83,13 @@ client.on("messageCreate", async (message) => {
           "https://cdn.discordapp.com/attachments/1394316929518272512/1404871028227706880/IMG_4996.jpg?ex=689cc39a&is=689b721a&hm=109cc458f150ba7b5e7663a75376e4e13762c53bd41ff1366fe22c9fa65ea08d&"
         )
         .setFooter({ text: `Gestopt door ${message.author.tag}` });
-
-      const msg = await channel.send({ embeds: [embed] });
-      ssuMessageId = msg.id;
     }
+
+    const msg = await channel.send({ content, embeds: [embed] });
+    ssuMessageId = msg.id;
   }
 
+  // Moderatie commands (kick/ban voorbeeld)
   else if (command === "kick") {
     if (!message.member.permissions.has(PermissionsBitField.Flags.KickMembers)) {
       return message.reply("❌ Je hebt geen rechten om dit te doen.");
@@ -96,12 +99,10 @@ client.on("messageCreate", async (message) => {
     try {
       await member.kick();
       message.channel.send(`✅ ${member.user.tag} is gekickt.`);
-    } catch (err) {
+    } catch {
       message.reply("❌ Kan deze gebruiker niet kicken.");
     }
-  }
-
-  else if (command === "ban") {
+  } else if (command === "ban") {
     if (!message.member.permissions.has(PermissionsBitField.Flags.BanMembers)) {
       return message.reply("❌ Je hebt geen rechten om dit te doen.");
     }
@@ -110,7 +111,7 @@ client.on("messageCreate", async (message) => {
     try {
       await member.ban();
       message.channel.send(`✅ ${member.user.tag} is verbannen.`);
-    } catch (err) {
+    } catch {
       message.reply("❌ Kan deze gebruiker niet bannen.");
     }
   }
