@@ -64,32 +64,30 @@ client.on("messageCreate", async (message) => {
     const channel = await client.channels.fetch(SSU_CHANNEL);
 
     let embed;
-    let content = null;
+    let content;
 
     if (args[0] === "start") {
       embed = new EmbedBuilder()
         .setColor("#004000") // donker groen
-        .setTitle(`🚀 Onze server is opgestart! (door ${message.author.tag})`)
+        .setTitle(`🔰 Onze server is opgestart!`)
         .setDescription(
           `Zorg ervoor dat je een beroep hebt.\nWe wensen je een geweldige RP-sessie toe!\n\nJoin de server via [Klik hier](https://policeroleplay.community/join/YdJXu)`
         )
         .setImage(
           "https://cdn.discordapp.com/attachments/1394316929518272512/1404869627636351049/IMG_4993.jpg?ex=689cc24c&is=689b70cc&hm=e49efb45f259d7d92bda1caa7451668138479e1afb0d178f70dddb8f2e81eb13&"
-        )
-        .setFooter({ text: `Gestart door ${message.author.tag}` });
-
-      content = `<@&${SSU_ROLE}>`;
+        );
+      content = `<@&${SSU_ROLE}> door <@${message.author.id}>`;
     } else {
       embed = new EmbedBuilder()
         .setColor("Red")
-        .setTitle(`⛔ Onze server is nu gesloten (door ${message.author.tag})`)
+        .setTitle(`⛔ Onze server is nu gesloten`)
         .setDescription(
           `Er is momenteel geen staff online, maar joinen kan nog steeds.\n\nGebruik [Klik hier](https://policeroleplay.community/join/YdJXu) om te verbinden.`
         )
         .setImage(
           "https://cdn.discordapp.com/attachments/1394316929518272512/1404871028227706880/IMG_4996.jpg?ex=689cc39a&is=689b721a&hm=109cc458f150ba7b5e7663a75376e4e13762c53bd41ff1366fe22c9fa65ea08d&"
-        )
-        .setFooter({ text: `Gestopt door ${message.author.tag}` });
+        );
+      content = `<@&${SSU_ROLE}> door <@${message.author.id}>`;
     }
 
     if (ssuMessageId) {
