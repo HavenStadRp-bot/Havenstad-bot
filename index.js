@@ -1,5 +1,4 @@
 const { Client, GatewayIntentBits, EmbedBuilder, PermissionsBitField } = require('discord.js');
-require('dotenv').config();
 
 const client = new Client({
     intents: [
@@ -15,13 +14,12 @@ const SSU_ROLE = "1404867280546041986"; // SSU ping rol
 const SSU_PERMISSION_ROLE = "1404873533951312024"; // Rol die SSU mag starten/stoppen
 const SSU_CHANNEL = "1404865394094637227"; // Kanaal voor SSU berichten
 
-let ssuMessageId = null; // Om het bericht later te verwijderen
+let ssuMessageId = null; // Om het SSU bericht later te verwijderen
 
 client.on("ready", () => {
     console.log(`✅ Ingelogd als ${client.user.tag}`);
 });
 
-// Command handler
 client.on("messageCreate", async message => {
     if (!message.content.startsWith(prefix) || message.author.bot) return;
 
@@ -58,7 +56,7 @@ client.on("messageCreate", async message => {
                 const oldMsg = await channel.messages.fetch(ssuMessageId);
                 await oldMsg.delete();
             } catch (err) {
-                console.log("Kon het oude SSU-bericht niet verwijderen:", err);
+                console.log("Kon het oude SSU bericht niet verwijderen:", err);
             }
             ssuMessageId = null;
         }
@@ -73,7 +71,7 @@ client.on("messageCreate", async message => {
         await channel.send({ embeds: [embed] });
     }
 
-    // Kick command
+    // Kick
     if (command === "kick") {
         if (!message.member.permissions.has(PermissionsBitField.Flags.KickMembers)) {
             return message.reply("❌ Je hebt geen rechten om dit te doen.");
@@ -84,7 +82,7 @@ client.on("messageCreate", async message => {
         message.channel.send(`✅ ${member.user.tag} is gekickt.`);
     }
 
-    // Ban command
+    // Ban
     if (command === "ban") {
         if (!message.member.permissions.has(PermissionsBitField.Flags.BanMembers)) {
             return message.reply("❌ Je hebt geen rechten om dit te doen.");
