@@ -46,7 +46,7 @@ client.on("messageCreate", async (message) => {
 
   // ---------- SSU START ----------
   if (command === "ssu" && args[0] === "start") {
-    if (!message.member.roles.cache.has("1404873533951312024"))
+    if (!staffRoles.some(r => message.member.roles.cache.has(r)))
       return message.reply("❌ Je hebt geen permissie om dit te doen.");
 
     const embed = new EmbedBuilder()
@@ -69,7 +69,7 @@ client.on("messageCreate", async (message) => {
 
   // ---------- SSU STOP ----------
   if (command === "ssu" && args[0] === "stop") {
-    if (!message.member.roles.cache.has("1404873533951312024"))
+    if (!staffRoles.some(r => message.member.roles.cache.has(r)))
       return message.reply("❌ Je hebt geen permissie om dit te doen.");
 
     const embed = new EmbedBuilder()
