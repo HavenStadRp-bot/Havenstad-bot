@@ -79,7 +79,7 @@ client.on("messageCreate", async (message) => {
       )
       .setColor("#8B0000")
       .setImage(
-        "https://cdn.discordapp.com/attachments/1394316929518272512/1404871028227706880/IMG_4996.jpg"
+        "https://cdn.discordapp.com/attachments/1394316929518272512/1409458645938470942/image.png?ex=68ad7427&is=68ac22a7&hm=36a8cf1f3d77a0d0b0037a5dd9626539c6d1f1f54527ff380ca1d516206e3cfe&"
       );
 
     const channel = message.guild.channels.cache.get("1404865394094637227");
