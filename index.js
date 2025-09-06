@@ -3,119 +3,105 @@ const {
   GatewayIntentBits,
   Partials,
   EmbedBuilder,
-  PermissionsBitField,
   ActionRowBuilder,
   ButtonBuilder,
   ButtonStyle,
-  AttachmentBuilder
 } = require("discord.js");
 const express = require("express");
-
 const app = express();
-const port = process.env.PORT || 4000;
+
+// Uptime ping
 app.get("/", (req, res) => res.send("Bot is running!"));
-app.listen(port, () => console.log(`Express running on port ${port}`));
+app.listen(3000, () => console.log("🌍 Express server running on port 3000"));
 
 const client = new Client({
   intents: [
     GatewayIntentBits.Guilds,
     GatewayIntentBits.GuildMessages,
+    GatewayIntentBits.DirectMessages,
     GatewayIntentBits.MessageContent,
-    GatewayIntentBits.GuildMembers,
-    GatewayIntentBits.DirectMessages
   ],
-  partials: [Partials.Channel]
+  partials: [Partials.Channel],
 });
 
-const prefix = "!";
-const staffRoles = [
+client.once("ready", () => {
+  console.log(`✅ ${client.user.tag} is online`);
+  client.user.setPresence({
+    activities: [{ name: "ZBRP Tickets 📩", type: 0 }],
+    status: "online",
+  });
+});
+
+// IDs
+const GUILD_ID = "1404783511629594645";
+const STAFF_ROLES = [
   "1406025210527879238",
   "1406942631522734231",
   "1406942944627265536",
   "1406943073694515280",
   "1406943251826606234",
-  "1406943483658371214"
+  "1406943483658371214",
 ];
-const advocaatRole = "1405092984688611398";
-const logChannelId = "1406026722620739654";
 
-// Ticket systeem
+// Ticket map
 const ticketMap = new Map();
-const now = () => new Date().toLocaleString("nl-NL", { dateStyle: "short", timeStyle: "short" });
+const now = () => new Date().toLocaleString("nl-NL");
 
-let activeMessage = null;
-
+// Panel command
 client.on("messageCreate", async (message) => {
-  if (!message.content.startsWith(prefix) || message.author.bot) return;
-  const args = message.content.slice(prefix.length).trim().split(/ +/);
-  const command = args.shift().toLowerCase();
+  if (message.content === "!sendpannel") {
+    if (!message.guild) return;
 
-  // ---------- SENDPANNEL ----------
-  if (command === "sendpannel") {
-    if (!staffRoles.some(r => message.member.roles.cache.has(r)))
+    const hasRole = STAFF_ROLES.some((roleId) =>
+      message.member.roles.cache.has(roleId)
+    );
+    if (!hasRole) {
       return message.reply("❌ Je hebt geen permissie om dit te doen.");
-
-    const targetChannel = message.mentions.channels.first();
-    if (!targetChannel) return message.reply("⚠ Gebruik: `!sendpannel #kanaal`");
+    }
 
     const embed = new EmbedBuilder()
-      .setTitle("📩 HavenStad Roleplay - Ticket Creating")
+      .setTitle("Zandbank Roleplay - Ticket Creating")
       .setDescription(
-        "Ticket Regels:\n\n" +
-        "● Maak geen klachtenticket zonder bewijs.\n" +
-        "● Lees eerst de FAQ voordat je een ticket opent.\n" +
-        "● Noem of tag geen staffleden in je ticket.\n" +
-        "● Maak geen tickets voor de grap of misbruik.\n" +
-        "● Je kunt in het ticketsysteem zien hoelang het gemiddeld duurt voor er een reactie komt."
+        `**Ticket Regels:**\n
+● maak geen klachtenticket zonder bewijs.
+● lees eerst de faq voordat je een ticket opent.
+● noem of tag geen staffleden in je ticket.
+● maak geen tickets voor de grap of misbruik.
+● je kunt in het ticketsysteem zien hoelang het gemiddeld duurt voor er een reactie komt.`
       )
-      .setColor("Green");
+      .setColor("Yellow");
 
     const row = new ActionRowBuilder().addComponents(
-      new ButtonBuilder().setCustomId("ticket_klacht").setLabel("Klacht").setStyle(ButtonStyle.Danger),
-      new ButtonBuilder().setCustomId("ticket_vraag").setLabel("Vraag").setStyle(ButtonStyle.Success),
-      new ButtonBuilder().setCustomId("ticket_partner").setLabel("Partnership").setStyle(ButtonStyle.Primary)
+      new ButtonBuilder()
+        .setCustomId("ticket_klacht")
+        .setLabel("📕 Klacht")
+        .setStyle(ButtonStyle.Danger),
+      new ButtonBuilder()
+        .setCustomId("ticket_vraag")
+        .setLabel("📘 Vraag")
+        .setStyle(ButtonStyle.Primary),
+      new ButtonBuilder()
+        .setCustomId("ticket_partner")
+        .setLabel("📗 Partnership")
+        .setStyle(ButtonStyle.Success)
     );
 
-    await targetChannel.send({ embeds: [embed], components: [row] });
-    await message.reply(`✅ Ticketpaneel verstuurd naar ${targetChannel}`);
+    await message.channel.send({ embeds: [embed], components: [row] });
+    await message.reply("✅ Ticketpaneel verstuurd!");
   }
-
-  // ---------- SSU START ----------
-  if (command === "ssu" && args[0] === "start") {
-    if (!staffRoles.some(r => message.member.roles.cache.has(r)))
-      return message.reply("❌ Je hebt geen permissie om dit te doen.");
-    const embed = new EmbedBuilder()
-      .setTitle(`🔰 HavenStad RP Server Opgestart (door ${message.author})`)
-      .setDescription(`Met onze server is opgestart!\nZorg ervoor dat je een beroep hebt.\nWe hopen dat je een goeie RP sessie hebt!\n\n[Ingame Server](https://policeroleplay.community/join/YdJXu)`)
-      .setColor("#006400")
-      .setImage("https://cdn.discordapp.com/attachments/1394316929518272512/1404869627636351049/IMG_4993.jpg");
-    const channel = message.guild.channels.cache.get("1404865394094637227");
-    if (activeMessage) await activeMessage.delete().catch(() => {});
-    activeMessage = await channel.send({ content: "<@&1404867280546041986>", embeds: [embed] });
-  }
-
-  // ---------- SSU STOP ----------
-  if (command === "ssu" && args[0] === "stop") {
-    if (!staffRoles.some(r => message.member.roles.cache.has(r)))
-      return message.reply("❌ Je hebt geen permissie om dit te doen.");
-    const embed = new EmbedBuilder()
-      .setTitle(`❌ HavenStad RP Server Gesloten (door ${message.author})`)
-      .setDescription(`Onze server is nu gesloten.\nDit betekent niet dat je niet kan joinen, maar er is geen staff online.\nJoinen kan nog altijd via [Klik hier](https://policeroleplay.community/join/YdJXu)`)
-      .setColor("#8B0000")
-      .setImage("https://cdn.discordapp.com/attachments/1394316929518272512/1409458645938470942/image.png");
-    const channel = message.guild.channels.cache.get("1404865394094637227");
-    if (activeMessage) await activeMessage.delete().catch(() => {});
-    activeMessage = await channel.send({ embeds: [embed] });
-  }
-
-  // ---------- andere commands ----------
-  // (embed, bloxlink, rechtzaak, case, close, clear, lock, unlock, slowmode, warn, userinfo, serverinfo)
-  // blijven zoals jij ze al had, ik heb ze hierboven gelaten maar ingekort om ruimte te besparen.
 });
 
-// Ticket knoppen
-client.on("interactionCreate", async interaction => {
+// Button handler
+client.on("interactionCreate", async (interaction) => {
   if (!interaction.isButton()) return;
+
+  if (!interaction.guild) {
+    return interaction.reply({
+      content: "⚠️ Dit werkt alleen in een server, niet in DM’s.",
+      flags: 64,
+    });
+  }
+
   const member = interaction.member;
   let type = "";
   if (interaction.customId === "ticket_klacht") type = "Klacht";
@@ -128,18 +114,33 @@ client.on("interactionCreate", async interaction => {
   try {
     const embed = new EmbedBuilder()
       .setTitle("🏷️ BEVESTIG UW TICKET!")
-      .setDescription(`Bent u zeker dat **${type}** het onderwerp is waarover u een ticket wilt openen?\n\nPowered by HVRP⚡•${now()}`)
+      .setDescription(
+        `Bent u zeker dat **${type}** het onderwerp is waarover u een ticket wilt openen?\n\nPowered by ZBRP⚡•${now()}`
+      )
       .setColor("Blue");
+
     const row = new ActionRowBuilder().addComponents(
-      new ButtonBuilder().setCustomId("ticket_cancel").setLabel("❌ Annuleren").setStyle(ButtonStyle.Danger),
-      new ButtonBuilder().setCustomId("ticket_confirm").setLabel("✅ Bevestigen").setStyle(ButtonStyle.Success)
+      new ButtonBuilder()
+        .setCustomId("ticket_cancel")
+        .setLabel("❌ Annuleren")
+        .setStyle(ButtonStyle.Danger),
+      new ButtonBuilder()
+        .setCustomId("ticket_confirm")
+        .setLabel("✅ Bevestigen")
+        .setStyle(ButtonStyle.Success)
     );
+
     await member.send({ embeds: [embed], components: [row] });
-    await interaction.reply({ content: "✅ Check je DM om je ticket te bevestigen!", ephemeral: true });
+    await interaction.reply({
+      content: "✅ Check je DM om je ticket te bevestigen!",
+      flags: 64,
+    });
   } catch {
-    await interaction.reply({ content: "⚠️ Kon geen DM sturen, zorg dat je DM’s open staan.", ephemeral: true });
+    await interaction.reply({
+      content: "⚠️ Kon geen DM sturen, zorg dat je DM’s open staan.",
+      flags: 64,
+    });
   }
 });
 
-// TODO: claim & close logica blijft hetzelfde → die heb je al in je vorige script en kan ik er zo weer helemaal inzetten.
-client.login(process.env.TOKEN);
+client.login(process.env.DISCORD_TOKEN);
