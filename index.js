@@ -1,3 +1,4 @@
+// --- Imports ---
 const {
   Client,
   GatewayIntentBits,
@@ -6,313 +7,215 @@ const {
   PermissionsBitField,
   ActionRowBuilder,
   ButtonBuilder,
-  ButtonStyle
+  ButtonStyle,
+  AttachmentBuilder
 } = require("discord.js");
 const express = require("express");
+require("dotenv").config();
 
+// --- Express (Uptime Pinger) ---
 const app = express();
 const port = process.env.PORT || 4000;
 app.get("/", (req, res) => res.send("Bot is running!"));
-app.listen(port, () => console.log(`Express running on port ${port}`));
+app.listen(port, () => console.log(`🌐 Express running on port ${port}`));
 
+// --- Client Setup ---
 const client = new Client({
   intents: [
     GatewayIntentBits.Guilds,
     GatewayIntentBits.GuildMessages,
+    GatewayIntentBits.DirectMessages,
     GatewayIntentBits.MessageContent,
     GatewayIntentBits.GuildMembers
   ],
   partials: [Partials.Channel]
 });
 
+// --- Config ---
 const prefix = "!";
-const staffRoles = [
-  "1406025210527879238",
-  "1406942631522734231",
-  "1406942944627265536",
-  "1406943073694515280",
-  "1406943251826606234",
-  "1406943483658371214"
-];
-const advocaatRole = "1405092984688611398";
-const logChannelId = "1406026722620739654";
+const staffRoles = ["1413273783745118252"]; // Staff role ID
+const logChannelId = "1406026722620739654"; // Log kanaal
+const ticketCategoryId = "1413273557093318748"; // Ticket categorie
+const guildId = "1391369587697913927"; // Je server ID
 
-let activeMessage = null;
+// Data opslag
+const ticketMap = new Map();
+const now = () => new Date().toLocaleString("nl-NL", { dateStyle: "short", timeStyle: "short" });
 
+// --- Ready Event ---
+client.once("ready", () => {
+  console.log(`✅ ${client.user.tag} is online`);
+  client.user.setPresence({
+    activities: [{ name: "🎫 DM Support", type: 3 }],
+    status: "online"
+  });
+});
+
+// --- MESSAGE COMMANDS ---
 client.on("messageCreate", async (message) => {
-  if (!message.content.startsWith(prefix) || message.author.bot) return;
-  const args = message.content.slice(prefix.length).trim().split(/ +/);
-  const command = args.shift().toLowerCase();
+  if (message.author.bot || !message.guild) return;
+  if (!message.content.startsWith(prefix)) return;
 
-  // ---------- SSU START ----------
-  if (command === "ssu" && args[0] === "start") {
-    if (!staffRoles.some(r => message.member.roles.cache.has(r)))
-      return message.reply("❌ Je hebt geen permissie om dit te doen.");
+  const [cmd, ...args] = message.content.slice(prefix.length).trim().split(/\s+/);
 
-    const embed = new EmbedBuilder()
-      .setTitle(`🔰 HavenStad RP Server Opgestart (door ${message.author})`)
-      .setDescription(
-        `Met onze server is opgestart!\nZorg ervoor dat je een beroep hebt.\nWe hopen dat je een goeie RP sessie hebt!\n\n[Ingame Server](https://policeroleplay.community/join/YdJXu)`
-      )
-      .setColor("#006400")
-      .setImage(
-        "https://cdn.discordapp.com/attachments/1394316929518272512/1404869627636351049/IMG_4993.jpg"
-      );
+  // --- !sendpannel ---
+  if (cmd === "sendpannel") {
+    // check staff
+    if (!message.member.roles.cache.some(r => staffRoles.includes(r.id))) {
+      return message.reply("❌ Je hebt geen permissies om dit te doen.");
+    }
 
-    const channel = message.guild.channels.cache.get("1404865394094637227");
-    if (activeMessage) await activeMessage.delete().catch(() => {});
-    activeMessage = await channel.send({
-      content: "<@&1404867280546041986>",
-      embeds: [embed]
-    });
-  }
-
-  // ---------- SSU STOP ----------
-  if (command === "ssu" && args[0] === "stop") {
-    if (!staffRoles.some(r => message.member.roles.cache.has(r)))
-      return message.reply("❌ Je hebt geen permissie om dit te doen.");
+    const channel = message.mentions.channels.first() || message.channel;
 
     const embed = new EmbedBuilder()
-      .setTitle(`❌ HavenStad RP Server Gesloten (door ${message.author})`)
+      .setColor("Yellow")
+      .setTitle("Zandbank Roleplay - Ticket Creating")
       .setDescription(
-        `Onze server is nu gesloten.\nDit betekent niet dat je niet kan joinen, maar er is geen staff online.\nJoinen kan nog altijd via [Klik hier](https://policeroleplay.community/join/YdJXu)`
+        `**Ticket Regels:**\n\n` +
+        `● Maak geen klachtenticket zonder bewijs.\n` +
+        `● Lees eerst de FAQ voordat je een ticket opent.\n` +
+        `● Noem of tag geen staffleden in je ticket.\n` +
+        `● Maak geen tickets voor de grap of misbruik.\n` +
+        `● Je kunt in het ticketsysteem zien hoelang het gemiddeld duurt voor er een reactie komt.`
       )
-      .setColor("#8B0000")
-      .setImage(
-        "https://cdn.discordapp.com/attachments/1394316929518272512/1409458645938470942/image.png?ex=68ad7427&is=68ac22a7&hm=36a8cf1f3d77a0d0b0037a5dd9626539c6d1f1f54527ff380ca1d516206e3cfe&"
-      );
-
-    const channel = message.guild.channels.cache.get("1404865394094637227");
-    if (activeMessage) await activeMessage.delete().catch(() => {});
-    activeMessage = await channel.send({ embeds: [embed] });
-  }
-
-  // ---------- EMBED ----------
-  if (command === "embed") {
-    if (!message.member.permissions.has(PermissionsBitField.Flags.ManageMessages))
-      return message.reply("❌ Geen permissie.");
-
-    const targetChannel = message.mentions.channels.first();
-    if (!targetChannel) return message.reply("⚠ Gebruik: `!embed #kanaal tekst | kleur | imageURL`");
-
-    const parts = args.slice(1).join(" ").split("|").map(p => p.trim());
-    const text = parts[0] || "Geen tekst";
-    const color = parts[1] || "#FFFF00";
-    const image = parts[2] || null;
-
-    const embed = new EmbedBuilder().setDescription(text).setColor(color);
-    if (image) embed.setImage(image);
-
-    targetChannel.send({ embeds: [embed] });
-  }
-
-  // ---------- BLOXLINK ----------
-  if (command === "bloxlink6388") {
-    const embed = new EmbedBuilder()
-      .setTitle("🌴 Welkom bij HavenStad ER:LC!")
-      .setDescription(
-        "Welkom in de server!\nKlik op **Verifieer hier** om je Roblox te koppelen via Bloxlink en toegang te krijgen tot mededelingen en voicechat."
-      )
-      .setColor("#FEE75C");
+      .setFooter({ text: `Powered by ZBRP ⚡ • ${now()}` });
 
     const row = new ActionRowBuilder().addComponents(
       new ButtonBuilder()
-        .setLabel("✅ Verifieer hier")
-        .setStyle(ButtonStyle.Link)
-        .setURL("https://blox.link/verify/6388"),
+        .setCustomId("open_vraag")
+        .setLabel("❓ Vragen")
+        .setStyle(ButtonStyle.Primary),
       new ButtonBuilder()
-        .setLabel("ℹ️ Info")
-        .setStyle(ButtonStyle.Link)
-        .setURL("https://blox.link/info")
+        .setCustomId("open_klacht")
+        .setLabel("⚠️ Klacht")
+        .setStyle(ButtonStyle.Danger),
+      new ButtonBuilder()
+        .setCustomId("open_partnership")
+        .setLabel("🤝 Partnership")
+        .setStyle(ButtonStyle.Success)
     );
 
-    message.channel.send({ embeds: [embed], components: [row] });
-  }
-
-  // ---------- RECHTZAAK ----------
-  if (command === "rechtzaak") {
-    if (!message.member.roles.cache.has(advocaatRole))
-      return message.reply("❌ Alleen advocaten kunnen dit doen.");
-
-    const [user1, user2, advocaatMention, type] = args;
-    const partij1 = message.mentions.users.at(0);
-    const partij2 = message.mentions.users.at(1);
-    const advocaat = message.mentions.users.at(2);
-
-    if (!partij1 || !partij2 || !advocaat)
-      return message.reply("Gebruik: `!rechtzaak @persoon1 @persoon2 @advocaat tekst/vc`");
-    if (type !== "tekst" && type !== "vc")
-      return message.reply("❌ Geef aan: `tekst` of `vc`");
-
-    const category = message.guild.channels.cache.get("1406026219966693558");
-    const channelName = `rechtzaak-${partij1.username}-vs-${partij2.username}`;
-
-    const overwrites = [
-      { id: message.guild.id, deny: [PermissionsBitField.Flags.ViewChannel] },
-      { id: partij1.id, allow: [PermissionsBitField.Flags.ViewChannel, PermissionsBitField.Flags.SendMessages] },
-      { id: partij2.id, allow: [PermissionsBitField.Flags.ViewChannel, PermissionsBitField.Flags.SendMessages] },
-      { id: advocaat.id, allow: [PermissionsBitField.Flags.ViewChannel, PermissionsBitField.Flags.SendMessages] }
-    ];
-    staffRoles.forEach(r => overwrites.push({ id: r, allow: [PermissionsBitField.Flags.ViewChannel, PermissionsBitField.Flags.SendMessages] }));
-
-    let newChannel;
-    if (type === "tekst") {
-      newChannel = await message.guild.channels.create({
-        name: channelName,
-        type: 0,
-        parent: category.id,
-        permissionOverwrites: overwrites
-      });
-    } else {
-      newChannel = await message.guild.channels.create({
-        name: channelName,
-        type: 2,
-        parent: category.id,
-        permissionOverwrites: overwrites
-      });
-    }
-
-    message.reply(`✅ Rechtzaak kanaal aangemaakt: ${newChannel}`);
-
-    const logEmbed = new EmbedBuilder()
-      .setTitle("⚖️ Nieuwe Rechtzaak")
-      .setDescription(`Partijen: ${partij1} vs ${partij2}\nAdvocaat: ${advocaat}\nType: ${type}`)
-      .setColor("#3498db")
-      .setFooter({ text: `Aangemaakt door ${message.author.tag}` });
-
-    message.guild.channels.cache.get(logChannelId).send({ embeds: [logEmbed] });
-  }
-
-  // ---------- CASE ----------
-  if (command === "case") {
-    if (!staffRoles.some(r => message.member.roles.cache.has(r)))
-      return message.reply("❌ Alleen staff kan cases maken.");
-
-    const target = message.mentions.users.first();
-    if (!target) return message.reply("Gebruik: `!case @user`");
-
-    const category = message.guild.channels.cache.get("1408734612322123817");
-    const channelName = `case-${target.username}`;
-
-    const overwrites = [
-      { id: message.guild.id, deny: [PermissionsBitField.Flags.ViewChannel] },
-      { id: target.id, allow: [PermissionsBitField.Flags.ViewChannel, PermissionsBitField.Flags.SendMessages] }
-    ];
-    staffRoles.forEach(r => overwrites.push({ id: r, allow: [PermissionsBitField.Flags.ViewChannel, PermissionsBitField.Flags.SendMessages] }));
-
-    const newChannel = await message.guild.channels.create({
-      name: channelName,
-      type: 0,
-      parent: category.id,
-      permissionOverwrites: overwrites
-    });
-
-    message.reply(`✅ Case kanaal aangemaakt: ${newChannel}`);
-
-    const logEmbed = new EmbedBuilder()
-      .setTitle("📂 Nieuwe Case")
-      .setDescription(`Case geopend voor ${target}`)
-      .setColor("#e67e22")
-      .setFooter({ text: `Aangemaakt door ${message.author.tag}` });
-
-    message.guild.channels.cache.get(logChannelId).send({ embeds: [logEmbed] });
-  }
-
-  // ---------- CLOSE ----------
-  if (command === "close") {
-    if (!staffRoles.some(r => message.member.roles.cache.has(r)))
-      return message.reply("❌ Geen permissie.");
-
-    if (message.channel.name.startsWith("rechtzaak-") || message.channel.name.startsWith("case-")) {
-      const logEmbed = new EmbedBuilder()
-        .setTitle("🔒 Kanaal gesloten")
-        .setDescription(`${message.channel.name} is gesloten door ${message.author}`)
-        .setColor("#2c3e50");
-
-      message.guild.channels.cache.get(logChannelId).send({ embeds: [logEmbed] });
-
-      await message.channel.send("🔒 Kanaal wordt gesloten...");
-      setTimeout(() => message.channel.delete().catch(() => {}), 3000);
-    } else {
-      message.reply("❌ Dit kanaal kan niet gesloten worden.");
-    }
-  }
-
-  // ---------- MOD COMMANDS ----------
-  if (command === "clear") {
-    if (!staffRoles.some(r => message.member.roles.cache.has(r)))
-      return message.reply("❌ Geen permissie.");
-    const amount = parseInt(args[0]);
-    if (!amount || amount < 1 || amount > 100)
-      return message.reply("⚠ Kies tussen 1 en 100.");
-    await message.channel.bulkDelete(amount, true);
-    message.channel.send(`✅ ${amount} berichten verwijderd.`).then(m => setTimeout(() => m.delete(), 3000));
-  }
-
-  if (command === "lock") {
-    if (!staffRoles.some(r => message.member.roles.cache.has(r)))
-      return message.reply("❌ Geen permissie.");
-    message.channel.permissionOverwrites.edit(message.guild.id, { SendMessages: false });
-    message.reply("🔒 Kanaal gelockt.");
-  }
-
-  if (command === "unlock") {
-    if (!staffRoles.some(r => message.member.roles.cache.has(r)))
-      return message.reply("❌ Geen permissie.");
-    message.channel.permissionOverwrites.edit(message.guild.id, { SendMessages: true });
-    message.reply("🔓 Kanaal geunlocked.");
-  }
-
-  if (command === "slowmode") {
-    if (!staffRoles.some(r => message.member.roles.cache.has(r)))
-      return message.reply("❌ Geen permissie.");
-    const time = parseInt(args[0]);
-    if (isNaN(time) || time < 0 || time > 21600)
-      return message.reply("⚠ Geef een tijd in seconden (0 - 21600).");
-    message.channel.setRateLimitPerUser(time);
-    message.reply(`⏱️ Slowmode ingesteld op ${time}s.`);
-  }
-
-  if (command === "warn") {
-    if (!staffRoles.some(r => message.member.roles.cache.has(r)))
-      return message.reply("❌ Geen permissie.");
-    const target = message.mentions.users.first();
-    if (!target) return message.reply("⚠ Gebruik: `!warn @user reden`");
-    const reason = args.slice(1).join(" ") || "Geen reden";
-    target.send(`⚠️ Je hebt een waarschuwing gekregen: ${reason}`).catch(() => {});
-    message.reply(`✅ ${target.tag} gewaarschuwd. (${reason})`);
-  }
-
-  if (command === "userinfo") {
-    const target = message.mentions.users.first() || message.author;
-    const member = message.guild.members.cache.get(target.id);
-    const embed = new EmbedBuilder()
-      .setTitle(`👤 Info over ${target.tag}`)
-      .setThumbnail(target.displayAvatarURL())
-      .addFields(
-        { name: "ID", value: target.id, inline: true },
-        { name: "Account gemaakt", value: `<t:${Math.floor(target.createdTimestamp / 1000)}:R>`, inline: true },
-        { name: "Server joined", value: `<t:${Math.floor(member.joinedTimestamp / 1000)}:R>`, inline: true },
-        { name: "Roles", value: member.roles.cache.map(r => r.name).join(", ") }
-      )
-      .setColor("#9b59b6");
-    message.channel.send({ embeds: [embed] });
-  }
-
-  if (command === "serverinfo") {
-    const { guild } = message;
-    const embed = new EmbedBuilder()
-      .setTitle(`📊 Info over ${guild.name}`)
-      .setThumbnail(guild.iconURL())
-      .addFields(
-        { name: "Leden", value: `${guild.memberCount}`, inline: true },
-        { name: "Kanalen", value: `${guild.channels.cache.size}`, inline: true },
-        { name: "Roles", value: `${guild.roles.cache.size}`, inline: true },
-        { name: "Gemaakt", value: `<t:${Math.floor(guild.createdTimestamp / 1000)}:R>`, inline: true }
-      )
-      .setColor("#1abc9c");
-    message.channel.send({ embeds: [embed] });
+    await channel.send({ embeds: [embed], components: [row] });
+    return message.reply("✅ Ticket-pannel verstuurd!");
   }
 });
 
+// --- INTERACTIONS (Tickets) ---
+client.on("interactionCreate", async (interaction) => {
+  if (!interaction.isButton()) return;
+
+  const user = interaction.user;
+  const guild = client.guilds.cache.get(guildId);
+  const member = guild.members.cache.get(user.id);
+
+  // --- Ticket bevestigen ---
+  if (interaction.customId.startsWith("open_")) {
+    const type =
+      interaction.customId === "open_vraag"
+        ? "Vraag"
+        : interaction.customId === "open_klacht"
+        ? "Klacht"
+        : "Partnership";
+
+    const confirmEmbed = new EmbedBuilder()
+      .setColor("Yellow")
+      .setTitle("🏷️ BEVESTIG UW TICKET!")
+      .setDescription(`Bent u zeker dat **${type}** het onderwerp is waarover u een ticket wilt openen?\n\nPowered by ZBRP ⚡ • ${now()}`);
+
+    const row = new ActionRowBuilder().addComponents(
+      new ButtonBuilder()
+        .setCustomId(`cancel_${type}_${user.id}`)
+        .setLabel("❌ Annuleren")
+        .setStyle(ButtonStyle.Secondary),
+      new ButtonBuilder()
+        .setCustomId(`confirm_${type}_${user.id}`)
+        .setLabel("✅ Bevestigen")
+        .setStyle(ButtonStyle.Success)
+    );
+
+    return interaction.reply({ embeds: [confirmEmbed], components: [row], ephemeral: true });
+  }
+
+  // --- Annuleren ---
+  if (interaction.customId.startsWith("cancel_")) {
+    return interaction.update({ content: "❌ Ticket geannuleerd.", embeds: [], components: [] });
+  }
+
+  // --- Bevestigen (ticket maken) ---
+  if (interaction.customId.startsWith("confirm_")) {
+    const [, type, userId] = interaction.customId.split("_");
+    if (user.id !== userId) return;
+
+    const guild = client.guilds.cache.get(guildId);
+    const channel = await guild.channels.create({
+      name: `ticket-${user.username}`,
+      type: 0,
+      parent: ticketCategoryId,
+      permissionOverwrites: [
+        { id: guild.roles.everyone.id, deny: [PermissionsBitField.Flags.ViewChannel] },
+        { id: user.id, allow: [PermissionsBitField.Flags.ViewChannel, PermissionsBitField.Flags.SendMessages] },
+        { id: staffRoles[0], allow: [PermissionsBitField.Flags.ViewChannel, PermissionsBitField.Flags.SendMessages] }
+      ]
+    });
+
+    ticketMap.set(channel.id, { userId: user.id, type, claimedBy: null });
+
+    const openedEmbed = new EmbedBuilder()
+      .setColor("Blue")
+      .setTitle("🎟️ TICKET GEOPEND!")
+      .setDescription(
+        `Hey ${user},\n\nBedankt voor uw **${type}** ticket. Onze medewerkers zijn op de hoogte gebracht en zullen binnenkort op uw verzoek reageren.\n\nEven geduld alstublieft...`
+      )
+      .setFooter({ text: `Powered by ZBRP ⚡ • ${now()}` });
+
+    const row = new ActionRowBuilder().addComponents(
+      new ButtonBuilder().setCustomId(`claim_${channel.id}`).setLabel("👤 Claim Ticket").setStyle(ButtonStyle.Primary),
+      new ButtonBuilder().setCustomId(`close_${channel.id}`).setLabel("📩 Sluit Ticket").setStyle(ButtonStyle.Danger)
+    );
+
+    await channel.send({ embeds: [openedEmbed], components: [row] });
+    await interaction.update({ content: "✅ Ticket geopend!", embeds: [], components: [] });
+  }
+
+  // --- Claim ---
+  if (interaction.customId.startsWith("claim_")) {
+    const [, channelId] = interaction.customId.split("_");
+    const ticket = ticketMap.get(channelId);
+    if (!ticket) return;
+
+    ticket.claimedBy = interaction.user.id;
+
+    const embed = new EmbedBuilder()
+      .setColor("Blue")
+      .setTitle("👤 TICKET IN BEHANDELING!")
+      .setDescription(`Hey <@${ticket.userId}>,\n\nDe medewerker ${interaction.user} is toegewezen aan uw ticket.\n\nPowered by ZBRP ⚡ • ${now()}`);
+
+    return interaction.reply({ embeds: [embed] });
+  }
+
+  // --- Sluit ticket ---
+  if (interaction.customId.startsWith("close_")) {
+    const [, channelId] = interaction.customId.split("_");
+    const ticket = ticketMap.get(channelId);
+    if (!ticket) return;
+
+    const user = await client.users.fetch(ticket.userId);
+    const embed = new EmbedBuilder()
+      .setColor("Blue")
+      .setTitle("📨 TICKET GESLOTEN!")
+      .setDescription(
+        `Hey ${user.username},\n\nOnze medewerkers hebben uw verzoek als opgelost gemarkeerd en uw ticket gesloten.\n\nHeeft u nog vragen? Open gerust een nieuw ticket.\n\nMvg,\nGRP Support-team`
+      )
+      .setFooter({ text: `Powered by ZBRP ⚡ • ${now()}` });
+
+    await user.send({ embeds: [embed] }).catch(() => {});
+    const channel = client.channels.cache.get(channelId);
+    if (channel) await channel.delete();
+
+    ticketMap.delete(channelId);
+    return;
+  }
+});
+
+// --- Login ---
 client.login(process.env.TOKEN);
