@@ -40,36 +40,6 @@ const logChannelId = "1406026722620739654";
 
 let activeMessage = null;
 
-// ---------- Invite Giveaway Variabelen ----------
-const activeInviteGiveaways = new Map();
-let guildInvites = new Map();
-
-// Bij bot ready: invites opslaan
-client.on("ready", async () => {
-    client.guilds.cache.forEach(async (guild) => {
-        const firstInvites = await guild.invites.fetch();
-        guildInvites.set(guild.id, new Map(firstInvites.map(inv => [inv.code, inv.uses])));
-    });
-    console.log(`Bot online als ${client.user.tag}`);
-});
-
-// Bijhouden wie een invite gebruikt
-client.on("guildMemberAdd", async (member) => {
-    const newInvites = await member.guild.invites.fetch();
-    const oldInvites = guildInvites.get(member.guild.id);
-    guildInvites.set(member.guild.id, new Map(newInvites.map(inv => [inv.code, inv.uses])));
-
-    const usedInvite = newInvites.find(inv => oldInvites.get(inv.code) < inv.uses);
-    if (!usedInvite) return;
-
-    const inviterId = usedInvite.inviter.id;
-
-    for (const g of activeInviteGiveaways.values()) {
-        const huidige = g.deelnemers.get(inviterId) || 0;
-        g.deelnemers.set(inviterId, huidige + 1);
-    }
-});
-
 client.on("messageCreate", async (message) => {
     if (!message.content.startsWith(prefix) || message.author.bot) return;
 
@@ -202,87 +172,32 @@ Joinen kan nog altijd via [Klik hier](https://policeroleplay.community/join/YdJX
         message.guild.channels.cache.get(logChannelId).send({ embeds: [logEmbed] });
     }
 
-    // ---------- INVITE GIVEAWAY ----------
-    if (command === "invitegiveaway") {
-        if (!staffRoles.some(r => message.member.roles.cache.has(r)))
-            return message.reply("❌ Je hebt geen permissie om dit te doen.");
+    // ---------- STAFF TRIGGER ----------
+    if (command === "staff") {
+        if (!staffRoles.some(r => message.member.roles.cache.has(r))) 
+            return message.reply("❌ Alleen staff kan dit doen.");
 
-        const prijs = args.join(" ");
-        if (!prijs) return message.reply("⚠ Gebruik: !invitegiveaway <prijs>");
+        const allowedCategories = [
+            "1411824632029515926",
+            "1411823559424217218",
+            "1411824393298116760",
+            "1411824525229817968"
+        ];
 
-        const weekMs = 7 * 24 * 60 * 60 * 1000;
-        const eindTijd = Date.now() + weekMs;
-
-        const embed = new EmbedBuilder()
-            .setTitle("🎉 Havenstad Invite Giveaway!")
-            .setDescription(`Prijs: **${prijs}**\nMaak je persoonlijke link met **!mijnlink** en nodig zoveel mogelijk vrienden uit!\n⏰ Eindigt over **7 dagen**.`)
-            .setColor("#FFD700")
-            .setTimestamp(eindTijd);
-
-        const msg = await message.channel.send({ embeds: [embed] });
-
-        activeInviteGiveaways.set(msg.id, { prijs, eind: eindTijd, deelnemers: new Map() });
-
-        setTimeout(async () => {
-            const data = activeInviteGiveaways.get(msg.id);
-            if (!data) return;
-
-            let winnaar = null;
-            let maxInvites = 0;
-            for (const [id, count] of data.deelnemers) {
-                if (count > maxInvites) {
-                    maxInvites = count;
-                    winnaar = id;
-                }
-            }
-
-            if (!winnaar) {
-                msg.channel.send("❌ Niemand heeft invites gehaald...");
-            } else {
-                msg.channel.send(`🏆 Gefeliciteerd <@${winnaar}>! Jij hebt de meeste invites (${maxInvites}) en wint **${data.prijs}**!`);
-            }
-
-            activeInviteGiveaways.delete(msg.id);
-        }, weekMs);
-    }
-
-    // ---------- PERSOONLIJKE LINK ----------
-    if (command === "mijnlink") {
-        const invite = await message.guild.invites.create(message.channel.id, {
-            maxAge: 0,
-            maxUses: 0,
-            unique: true,
-            reason: `Invite voor ${message.author.tag}`
-        });
+        if (!message.channel.parentId || !allowedCategories.includes(message.channel.parentId)) {
+            return message.reply("❌ Dit command kan alleen in staff-categorieën gebruikt worden.").then(msg => {
+                setTimeout(() => msg.delete().catch(() => {}), 5000);
+            });
+        }
 
         const embed = new EmbedBuilder()
-            .setTitle("🔗 Jouw Havenstad Invite Link")
-            .setDescription(`Gebruik deze link om mee te doen aan de giveaway:\n${invite.url}`)
-            .setColor("#00BFFF");
+            .setTitle("📢 Ticket Geopend")
+            .setDescription(`Hoi ik ben **${message.author.username}** van Havenstad ER:LC, als u alvast neer kan zetten wat uw probleem is!\n\n📌 Voor vragen over de server of spelregels kun je ook kijken in <#1404862468689367072>.\n\nBlijf vriendelijk en duidelijk, dan helpen we je zo snel mogelijk verder. 🚀`)
+            .setColor("#FEE75C")
+            .setImage("https://media.discordapp.net/attachments/1394316929518272512/1405263091901661214/C7F71E32-384F-477A-AE63-B8488F2C7729.jpg?ex=68c6667d&is=68c514fd&hm=f57029624ad9a890ae5a6af1f8543b75deae8918d28193a939d8dcc3eb32973d&=&format=webp&width=655&height=655");
 
-        message.reply({ embeds: [embed] });
-    }
-
-    // ---------- TUSSENSTAND ----------
-    if (command === "stand") {
-        const data = [...activeInviteGiveaways.values()][0];
-        if (!data) return message.reply("❌ Er is momenteel geen actieve invite giveaway.");
-
-        const top5 = [...data.deelnemers.entries()]
-            .sort((a, b) => b[1] - a[1])
-            .slice(0, 5);
-
-        if (top5.length === 0) return message.reply("❌ Nog geen deelnemers met invites.");
-
-        const desc = top5.map(([id, count], i) => `**${i + 1}.** <@${id}> — ${count} invites`).join("\n");
-
-        const embed = new EmbedBuilder()
-            .setTitle("📊 Tussenstand Havenstad Giveaway")
-            .setDescription(desc)
-            .setColor("#3498db")
-            .setFooter({ text: `Prijs: ${data.prijs}` });
-
-        message.channel.send({ embeds: [embed] });
+        await message.delete().catch(() => {});
+        await message.channel.send({ embeds: [embed] });
     }
 });
 
