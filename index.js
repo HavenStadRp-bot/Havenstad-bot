@@ -194,7 +194,7 @@ Joinen kan nog altijd via [Klik hier](https://policeroleplay.community/join/YdJX
             .setTitle("📢 Ticket Geopend")
             .setDescription(`Hoi ik ben **${message.author.username}** van Havenstad ER:LC, als u alvast neer kan zetten wat uw probleem is!\n\n📌 Voor vragen over de server of spelregels kun je ook kijken in <#1404862468689367072>.\n\nBlijf vriendelijk en duidelijk, dan helpen we je zo snel mogelijk verder. 🚀`)
             .setColor("#FEE75C")
-            .setImage("https://media.discordapp.net/attachments/1394316929518272512/1405263091901661214/C7F71E32-384F-477A-AE63-B8488F2C7729.jpg?ex=68c6667d&is=68c514fd&hm=f57029624ad9a890ae5a6af1f8543b75deae8918d28193a939d8dcc3eb32973d&=&format=webp&width=655&height=655");
+            .setThumbnail("https://media.discordapp.net/attachments/1394316929518272512/1405263091901661214/C7F71E32-384F-477A-AE63-B8488F2C7729.jpg?ex=68c6667d&is=68c514fd&hm=f57029624ad9a890ae5a6af1f8543b75deae8918d28193a939d8dcc3eb32973d&=&format=webp&width=655&height=655");
 
         await message.delete().catch(() => {});
         await message.channel.send({ embeds: [embed] });
