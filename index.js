@@ -46,14 +46,18 @@ client.on('messageCreate', async (message) => {
 
     try {
 
-        // DM sturen
+        // ===== DM sturen =====
         try {
             await message.author.send(
-                'You are banned.\nReason: Anti Raid, for unban dm @brammetjeb123.'
+                'You are banned.\nReason: Anti Raid/Scam\nFor unban DM @brammetjeb123.'
             );
+            console.log('DM verstuurd');
         } catch (err) {
-            console.log('DM mislukt');
+            console.log('DM mislukt:', err.message);
         }
+
+        // kleine delay zodat DM kan aankomen
+        await new Promise(r => setTimeout(r, 1500));
 
         // bericht verwijderen
         await message.delete().catch(() => {});
@@ -61,13 +65,13 @@ client.on('messageCreate', async (message) => {
         // ban
         await message.guild.members.ban(message.author.id, {
             deleteMessageSeconds: 60 * 60 * 24 * 7,
-            reason: 'Anti Raid, for unban dm @brammetjeb123.'
+            reason: 'Anti Raid/Scam'
         });
 
         console.log(`${message.author.tag} geband`);
 
     } catch (err) {
-        console.error(err);
+        console.error('FOUT:', err);
     }
 
 });
