@@ -1,17 +1,12 @@
 {
-  "name": "havenstad-roleplay",
+  "name": "Apex Building Anti Raid Bot",
   "version": "1.0.0",
-  "description": "Speelt HavenStad Roleplay ER:LC",
   "main": "index.js",
+  "type": "commonjs",
   "scripts": {
     "start": "node index.js"
   },
   "dependencies": {
-    "discord.js": "^14.14.1",
-    "express": "^4.19.2",
-    "dotenv": "^16.4.5"
-  },
-  "engines": {
-    "node": "22.x"
+    "discord.js": "^14.15.3"
   }
 }
