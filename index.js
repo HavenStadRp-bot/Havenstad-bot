@@ -25,12 +25,12 @@ const client = new Client({
     ]
 });
 
-const TOKEN = 'JE_BOT_TOKEN';
-const TARGET_CHANNEL_ID = 'CHANNEL_ID';
+const TOKEN = process.env.JE_BOT_TOKEN;
+const TARGET_CHANNEL_ID = '1505314324976242840';
 
 // whitelist (niet bannen)
 const whitelist = [
-    'JOUW_USER_ID'
+    '1189931854657224858'
 ];
 
 client.once('ready', () => {
