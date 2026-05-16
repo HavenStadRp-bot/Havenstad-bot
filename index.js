@@ -26,7 +26,7 @@ const client = new Client({
 });
 
 const TOKEN = process.env.JE_BOT_TOKEN;
-const TARGET_CHANNEL_ID = '1505314324976242840';
+const TARGET_CHANNEL_ID = '1492273126560764014';
 
 const whitelist = [
     '1189931854657224858'
