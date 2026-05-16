@@ -1,6 +1,7 @@
 const {
     Client,
-    GatewayIntentBits
+    GatewayIntentBits,
+    EmbedBuilder
 } = require('discord.js');
 
 const express = require('express');
@@ -20,8 +21,7 @@ const client = new Client({
     intents: [
         GatewayIntentBits.Guilds,
         GatewayIntentBits.GuildMessages,
-        GatewayIntentBits.MessageContent,
-        GatewayIntentBits.DirectMessages
+        GatewayIntentBits.MessageContent
     ]
 });
 
@@ -46,17 +46,27 @@ client.on('messageCreate', async (message) => {
 
     try {
 
+        // ===== EMBED =====
+        const embed = new EmbedBuilder()
+            .setColor(0xFFFF00) // geel
+            .setAuthor({
+                name: 'Anti Raid System',
+                iconURL: 'https://cdn.discordapp.com/attachments/1475250183951482880/1505319636327993444/skinmc-avatar.png'
+            })
+            .setTitle('You have been banned')
+            .setDescription('Reason: Anti Raid/Scam\nFor unban DM @brammetjeb123.')
+            .setFooter({ text: 'Server Protection' })
+            .setTimestamp();
+
         // ===== DM sturen =====
         try {
-            await message.author.send(
-                'You are banned.\nReason: Anti Raid/Scam\nFor unban DM @brammetjeb123.'
-            );
+            await message.author.send({ embeds: [embed] });
             console.log('DM verstuurd');
         } catch (err) {
             console.log('DM mislukt:', err.message);
         }
 
-        // kleine delay zodat DM kan aankomen
+        // kleine delay zodat DM aankomt
         await new Promise(r => setTimeout(r, 1500));
 
         // bericht verwijderen
